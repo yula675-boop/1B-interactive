@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>1B Life in colour - Interactive Workbook</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Touch action & zoom prevention on mobile */
+        input[type="text"] {
+            font-size: 16px !important; /* Prevents iOS auto-zoom on focus */
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+
+        .drag-hover {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+
+        .correct-input {
+            border-color: #10b981 !important;
+            background-color: #ecfdf5 !important;
+            color: #065f46 !important;
+            font-weight: 600;
+        }
+
+        .incorrect-input {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            color: #991b1b !important;
+            font-weight: 600;
+        }
+
+        /* Pulse animation for active tap selection */
+        .selected-tile {
+            ring: 3px solid #3b82f6;
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Responsive custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen pb-12 select-none md:select-auto">
+
+    <!-- Top Sticky Header Bar -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center justify-between w-full sm:w-auto">
+                <div class="flex items-center space-x-2.5">
+                    <span class="bg-blue-600 text-white font-bold px-2.5 py-1 rounded-lg text-base">1B</span>
+                    <div>
+                        <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Life in colour</h1>
+                        <p class="text-[11px] text-slate-500 font-medium">1 VOCABULARY adjective suffixes</p>
+                    </div>
+                </div>
+                <!-- Mobile Score Badge -->
+                <div class="sm:hidden flex items-center bg-blue-50 border border-blue-200 px-3 py-1 rounded-full text-xs font-bold text-blue-700">
+                    <span id="total-score-mobile">0 / 48</span>
+                </div>
+            </div>
+            
+            <!-- Global Score Bar & Controls -->
+            <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-3">
+                <div class="hidden sm:flex items-center space-x-3 bg-slate-50 px-3.5 py-1.5 rounded-full border border-slate-200 text-xs">
+                    <span class="font-semibold text-slate-500 uppercase tracking-wider">Score:</span>
+                    <span id="total-score" class="text-base font-bold text-blue-600">0 / 48</span>
+                    <span id="score-percentage" class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">0%</span>
+                </div>
+                
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <button onclick="checkAllExercises()" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold text-xs sm:text-sm px-4 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check"></i> Check Answers
+                    </button>
+                    <button onclick="resetAllExercises()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs sm:text-sm px-3 py-2 rounded-xl transition-all active:scale-95 flex items-center justify-center" title="Reset Workbook">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+
+        <!-- Mobile Quick Instructions Banner -->
+        <div id="mobile-hint-banner" class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 mb-4 text-xs flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-hand-pointer text-amber-600 text-sm"></i>
+                <span><strong>Phone friendly!</strong> Tap gaps to type or tap word tiles to place them directly!</span>
+            </div>
+            <button onclick="document.getElementById('mobile-hint-banner').remove()" class="text-amber-500 hover:text-amber-800 p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Banner Quote -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 mb-6 shadow-xs relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <blockquote class="italic text-slate-200 text-xs sm:text-sm border-l-4 border-blue-400 pl-3 py-0.5">
+                    "Man needs colour to live. It's just as necessary an element as fire or water."
+                    <footer class="text-[11px] text-blue-300 font-normal mt-0.5 not-italic">
+                        — Fernand Léger, French painter, sculptor, and film-maker
+                    </footer>
+                </blockquote>
+                <div class="flex flex-wrap gap-1.5 text-[10px] sm:text-xs font-medium">
+                    <span class="bg-white/10 text-slate-200 px-2.5 py-1 rounded-md">G adjectives</span>
+                    <span class="bg-blue-600/50 text-blue-100 px-2.5 py-1 rounded-md font-bold border border-blue-400/40">V adjective suffixes</span>
+                    <span class="bg-white/10 text-slate-200 px-2.5 py-1 rounded-md">P word stress</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            
+            <!-- LEFT COLUMN: EXERCISES A & B -->
+            <div class="space-y-6 sm:space-y-8">
+
+                <!-- EXERCISE A -->
+                <section class="bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <span class="bg-slate-900 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-xs sm:text-sm">a</span>
+                                Complete with the adjective form
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Use a suffix from the list. Type the correct answer in the gap.</p>
+                        </div>
+                        <button onclick="checkExercise('a')" class="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            Check A
+                        </button>
+                    </div>
+
+                    <!-- Suffix Help Chips -->
+                    <div class="bg-blue-50/70 border border-blue-200/70 rounded-xl p-2.5 mb-4 flex flex-wrap justify-center gap-1.5 text-xs font-bold text-blue-900">
+                        <span class="px-2 py-0.5 bg-white rounded border border-blue-100">-able / -ible</span>
+                        <span class="px-2 py-0.5 bg-white rounded border border-blue-100">-ate</span>
+                        <span class="px-2 py-0.5 bg-white rounded border border-blue-100">-ive</span>
+                        <span class="px-2 py-0.5 bg-white rounded border border-blue-100">-ous</span>
+                        <span class="px-2 py-0.5 bg-white rounded border border-blue-100">-ful</span>
+                    </div>
+
+                    <!-- Questions Container -->
+                    <div id="exercise-a-container" class="space-y-3">
+                        <!-- Javascript Populated -->
+                    </div>
+                </section>
+
+
+                <!-- EXERCISE B -->
+                <section class="bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <span class="bg-slate-900 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-xs sm:text-sm">b</span>
+                                Complete the sentences
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Tap a word from the bank, then tap a gap to place & write its adjective form!</p>
+                        </div>
+                        <button onclick="checkExercise('b')" class="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            Check B
+                        </button>
+                    </div>
+
+                    <!-- Word Bank B -->
+                    <div class="mb-4">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Word Bank (Tap to select):</label>
+                        <div id="exercise-b-wordbank" class="flex flex-wrap gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl min-h-[50px]">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Questions Container B -->
+                    <div id="exercise-b-container" class="space-y-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+            </div>
+
+
+            <!-- RIGHT COLUMN: EXERCISES C & D -->
+            <div class="space-y-6 sm:space-y-8">
+
+                <!-- EXERCISE C -->
+                <section class="bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <span class="bg-slate-900 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-xs sm:text-sm">c</span>
+                                Complete the text with adjective forms
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Type the correct adjective forms in the passage gaps.</p>
+                        </div>
+                        <button onclick="checkExercise('c')" class="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            Check C
+                        </button>
+                    </div>
+
+                    <!-- Passage Container -->
+                    <div class="bg-slate-50/70 p-3.5 sm:p-5 border border-slate-200 rounded-xl leading-relaxed text-xs sm:text-sm text-slate-800 space-y-3 max-h-[550px] overflow-y-auto">
+                        <p id="exercise-c-passage">
+                            <!-- Populated dynamically -->
+                        </p>
+                    </div>
+                </section>
+
+
+                <!-- EXERCISE D -->
+                <section class="bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <span class="bg-slate-900 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-xs sm:text-sm">d</span>
+                                Categorize Suffixes (-ful / -less)
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Tap a word below, then tap the appropriate column box to place it!</p>
+                        </div>
+                        <button onclick="checkExercise('d')" class="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                            Check D
+                        </button>
+                    </div>
+
+                    <!-- Word Bank D -->
+                    <div class="mb-4">
+                        <label class="block text-[11px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Word Bank (Tap or drag):</label>
+                        <div id="exercise-d-wordbank" class="flex flex-wrap gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl min-h-[55px]">
+                            <!-- Word tiles dynamically loaded -->
+                        </div>
+                    </div>
+
+                    <!-- Columns Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <!-- Both Column -->
+                        <div onclick="placeSelectedTileInColumn('both')" class="drop-target cursor-pointer bg-indigo-50/40 border border-indigo-200 rounded-xl p-2.5 flex flex-col transition-colors hover:bg-indigo-50/80">
+                            <div class="text-center pb-2 mb-2 border-b border-indigo-200 font-bold text-xs text-indigo-900 flex items-center justify-center gap-1">
+                                <span>-ful and -less</span>
+                                <i class="fa-solid fa-circle-plus text-[10px] text-indigo-400 sm:hidden"></i>
+                            </div>
+                            <div id="col-both" class="min-h-[160px] flex-1 space-y-2" data-column="both"></div>
+                        </div>
+
+                        <!-- Only -ful Column -->
+                        <div onclick="placeSelectedTileInColumn('ful')" class="drop-target cursor-pointer bg-emerald-50/40 border border-emerald-200 rounded-xl p-2.5 flex flex-col transition-colors hover:bg-emerald-50/80">
+                            <div class="text-center pb-2 mb-2 border-b border-emerald-200 font-bold text-xs text-emerald-900 flex items-center justify-center gap-1">
+                                <span>only -ful</span>
+                                <i class="fa-solid fa-circle-plus text-[10px] text-emerald-400 sm:hidden"></i>
+                            </div>
+                            <div id="col-ful" class="min-h-[160px] flex-1 space-y-2" data-column="ful"></div>
+                        </div>
+
+                        <!-- Only -less Column -->
+                        <div onclick="placeSelectedTileInColumn('less')" class="drop-target cursor-pointer bg-amber-50/40 border border-amber-200 rounded-xl p-2.5 flex flex-col transition-colors hover:bg-amber-50/80">
+                            <div class="text-center pb-2 mb-2 border-b border-amber-200 font-bold text-xs text-amber-900 flex items-center justify-center gap-1">
+                                <span>only -less</span>
+                                <i class="fa-solid fa-circle-plus text-[10px] text-amber-400 sm:hidden"></i>
+                            </div>
+                            <div id="col-less" class="min-h-[160px] flex-1 space-y-2" data-column="less"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </div>
+
+        <!-- Global Control Bar Footer -->
+        <div class="mt-8 bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="text-center sm:text-left">
+                <h3 class="text-sm sm:text-base font-bold text-slate-900">Finished your workbook page?</h3>
+                <p class="text-xs text-slate-500">Check all your answers or reset to try again from the start.</p>
+            </div>
+            <div class="flex items-center space-x-3 w-full sm:w-auto">
+                <button onclick="resetAllExercises()" class="flex-1 sm:flex-none px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs sm:text-sm rounded-xl transition-all border border-slate-300 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Reset
+                </button>
+                <button onclick="checkAllExercises()" class="flex-1 sm:flex-none px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-xs flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-square-check"></i> Check All Answers
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Mobile Toast Notification -->
+    <div id="toast" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 z-50 transform translate-y-28 opacity-0 transition-all duration-300 ease-out bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <div class="text-left">
+            <div id="toast-title" class="font-bold text-xs sm:text-sm">Evaluated</div>
+            <div id="toast-message" class="text-[11px] sm:text-xs text-slate-300">Your answers have been checked.</div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* EXERCISE DATA */
+        const dataExA = [
+            { num: 1, pre: "I think Charlie's very", root: "ATTRACT", post: "- he always looks great!", ans: ["attractive"], defaultVal: "attractive", readonly: true },
+            { num: 2, pre: "My aunt is a very", root: "COMPASSION", post: "woman. She volunteers at a hospital every weekend.", ans: ["compassionate"] },
+            { num: 3, pre: "My girlfriend is very", root: "ASSERT", post: ". She isn't afraid to express her opinion.", ans: ["assertive"] },
+            { num: 4, pre: "It was very", root: "THOUGHT", post: "of you to visit me in hospital.", ans: ["thoughtful"] },
+            { num: 5, pre: "Sue's a", root: "LOVE", post: "child. We all adore her.", ans: ["lovable", "loveable", "lovely"] },
+            { num: 6, pre: "I'm very", root: "ENVY", post: "of my friend's new car.", ans: ["envious"] },
+            { num: 7, pre: "She's a", root: "SUCCESS", post: "author. She's written many books and won several important prizes.", ans: ["successful"] },
+            { num: 8, pre: "Jess is a", root: "RESPONSE", post: "teenager. She often looks after the neighbour's children.", ans: ["responsible"] },
+            { num: 9, pre: "My sister is rather", root: "IMPULSE", post: ". She doesn't think before she acts.", ans: ["impulsive"] },
+            { num: 10, pre: "My nephew is really", root: "HELP", post: ". He often does my shopping for me.", ans: ["helpful"] },
+            { num: 11, pre: "Philip was quite", root: "REBEL", post: "in his teens, but now he's calmed down.", ans: ["rebellious"] },
+            { num: 12, pre: "You have to be careful what you say to Helen. She's very", root: "SENSE", post: ".", ans: ["sensitive"] }
+        ];
+
+        const dataExB = [
+            { num: 1, word: "affection", pre: "Maria's children are very", post: ". They always give us a big hug when we arrive.", ans: "affectionate", readonly: true },
+            { num: 2, word: "possess", pre: "Matt's girlfriend is very", post: ". She doesn't let him talk to other girls.", ans: "possessive" },
+            { num: 3, word: "consider", pre: "My boss is quite", post: ". She always lets me take time off if my children are ill.", ans: "considerate" },
+            { num: 4, word: "rely", pre: "My assistant isn't very", post: ". I can't trust her to do anything important.", ans: "reliable" },
+            { num: 5, word: "glamour", pre: "Lisa's very", post: ". She looks like an actress!", ans: "glamorous" },
+            { num: 6, word: "power", pre: "He's a very", post: "businessman. He owns several large companies and he makes a lot of money.", ans: "powerful" },
+            { num: 7, word: "create", pre: "Anna's really", post: ". She's made some wonderful sculptures.", ans: "creative" }
+        ];
+
+        const dataExC = [
+            { id: 1, root: "risk", ans: "risky", pre: "Last year, my friend Mark made a 1. ", post: " investment: he bought an old house to repair and sell. ", defaultVal: "risky", readonly: true },
+            { id: 2, root: "impress", ans: "impressive", pre: "Although it had once been one of the most expensive and 2. ", post: " buildings in the street, " },
+            { id: 3, root: "afford", ans: "affordable", pre: "the house was 3. ", post: " because it was in such bad condition. " },
+            { id: 4, root: "dirt", ans: "dirty", pre: "The outside walls were 4. ", post: " and damaged in places, " },
+            { id: 5, root: "danger", ans: "dangerous", pre: "which made the building quite 5. ", post: ". " },
+            { id: 6, root: "mess", ans: "messy", pre: "The garden was 6. ", post: " because no one had looked after it for years. " },
+            { id: 7, root: "noise", ans: "noisy", pre: "The windows didn't fit properly, so the house was cold and 7. ", post: " - you could hear the traffic outside. <br/><br/>" },
+            { id: 8, root: "recognize", ans: "recognizable", altAns: ["recognisably", "recognisable"], pre: "Today the house is hardly 8. ", post: ". " },
+            { id: 9, root: "spacious", altAns: ["large", "nice", "bright"], ans: "spacious", pre: "Downstairs, there's a 9. ", post: " living room with a sofa and some " },
+            { id: 10, root: "comfort", ans: "comfortable", pre: "10. ", post: " armchairs. " },
+            { id: 11, root: "suit", ans: "suitable", pre: "As well as an enormous kitchen, there's another room, which would be 11. ", post: " as a study or a small bedroom. <br/><br/>" },
+            { id: 12, root: "luxury", ans: "luxurious", pre: "Upstairs, there's a 12. ", post: " bathroom with a jacuzzi, as well as four tastefully-decorated bedrooms. " },
+            { id: 13, root: "health", ans: "healthy", pre: "Mark doesn't have a very 13. ", post: " lifestyle, as he spends all day sitting at a desk, so he's installed a small gym in the attic. <br/><br/>" },
+            { id: 14, root: "peace", ans: "peaceful", pre: "The house is also much quieter and more 14. ", post: " now because the windows have been changed. " },
+            { id: 15, root: "colour", ans: "colourful", altAns: ["colorful"], pre: "The garden has been tidied, and it has some beautiful flowers, which makes it much more 15. ", post: ". " },
+            { id: 16, root: "rest", ans: "restful", pre: "It's a very 16. ", post: " place to sit and have lunch or read a book. <br/><br/>" },
+            { id: 17, root: "stress", ans: "stressful", pre: "Repairing a house can be quite 17. ", post: ", but Mark is happy with the result. " },
+            { id: 18, root: "expense", ans: "expensive", pre: "The repairs were 18. ", post: ", " },
+            { id: 19, root: "profit", ans: "profitable", pre: "but he's sure he has made a 19. ", post: " investment. " },
+            { id: 20, root: "desire", ans: "desirable", pre: "The house is in a 20. ", post: " part of town, and he's calculated that it's now worth three times the money he paid for it." }
+        ];
+
+        const dataExD = [
+            { word: "care", correctCol: "both", ful: "careful", less: "careless" },
+            { word: "colour", correctCol: "both", ful: "colourful", less: "colourless" },
+            { word: "end", correctCol: "less", less: "endless" },
+            { word: "help", correctCol: "both", ful: "helpful", less: "helpless" },
+            { word: "hope", correctCol: "both", ful: "hopeful", less: "hopeless" },
+            { word: "peace", correctCol: "ful", ful: "peaceful" },
+            { word: "power", correctCol: "both", ful: "powerful", less: "powerless" },
+            { word: "rest", correctCol: "both", ful: "restful", less: "restless" },
+            { word: "stress", correctCol: "ful", ful: "stressful" },
+            { word: "success", correctCol: "ful", ful: "successful" },
+            { word: "thought", correctCol: "both", ful: "thoughtful", less: "thoughtless" },
+            { word: "use", correctCol: "both", ful: "useful", less: "useless" }
+        ];
+
+        // Global State for Mobile Tap Interactions
+        let selectedWordB = null;
+        let selectedWordD = null;
+
+        window.onload = function() {
+            renderExerciseA();
+            renderExerciseB();
+            renderExerciseC();
+            renderExerciseD();
+            updateTotalScore();
+        };
+
+        /* RENDER FUNCTIONS */
+
+        function renderExerciseA() {
+            const container = document.getElementById('exercise-a-container');
+            container.innerHTML = dataExA.map(q => `
+                <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 p-2 rounded-xl bg-slate-50/50 sm:bg-transparent border border-slate-100 sm:border-0 text-xs sm:text-sm">
+                    <div class="flex items-center gap-1.5 flex-1 flex-wrap">
+                        <span class="font-bold text-slate-400 min-w-[18px]">${q.num}.</span>
+                        <span>${q.pre}</span>
+                        <input type="text" 
+                               id="ex-a-${q.num}" 
+                               data-ans="${q.ans.join('|')}"
+                               value="${q.defaultVal || ''}"
+                               ${q.readonly ? 'readonly' : ''}
+                               class="ex-a-input px-2.5 py-1 bg-white border border-slate-300 ${q.readonly ? 'bg-slate-100 text-slate-600 font-semibold border-slate-200' : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200'} rounded-lg text-center font-medium min-w-[120px] max-w-[160px] outline-none transition-all"
+                               placeholder="...">
+                        <span>${q.post}</span>
+                    </div>
+                    <span class="self-end sm:self-center font-bold text-[10px] sm:text-xs bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded border border-slate-300 uppercase">${q.root}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderExerciseB() {
+            const wordbank = document.getElementById('exercise-b-wordbank');
+            const container = document.getElementById('exercise-b-container');
+
+            wordbank.innerHTML = dataExB.map((item, idx) => `
+                <div id="wordbank-b-${idx}" 
+                     draggable="true" 
+                     ondragstart="dragB(event, '${item.word}')"
+                     onclick="selectWordB('${item.word}', 'wordbank-b-${idx}')"
+                     class="word-tile-b px-3 py-1.5 bg-white border border-slate-300 hover:border-blue-400 shadow-2xs rounded-lg text-xs font-semibold text-slate-700 cursor-pointer select-none transition-all flex items-center gap-1.5">
+                     <i class="fa-solid fa-hand-pointer text-blue-400 text-[10px]"></i>
+                     ${item.word}
+                </div>
+            `).join('');
+
+            container.innerHTML = dataExB.map(q => `
+                <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 p-2 rounded-xl bg-slate-50/50 sm:bg-transparent border border-slate-100 sm:border-0 text-xs sm:text-sm">
+                    <div class="flex items-center gap-1.5 flex-1 flex-wrap">
+                        <span class="font-bold text-slate-400 min-w-[18px]">${q.num}.</span>
+                        <span>${q.pre}</span>
+                        <input type="text" 
+                               id="ex-b-${q.num}" 
+                               data-ans="${q.ans}"
+                               value="${q.readonly ? q.ans : ''}"
+                               ${q.readonly ? 'readonly' : ''}
+                               ondrop="dropB(event, ${q.num})"
+                               ondragover="allowDrop(event)"
+                               onclick="placeWordB(${q.num})"
+                               class="ex-b-input px-2.5 py-1 bg-white border border-slate-300 ${q.readonly ? 'bg-slate-100 text-slate-600 font-semibold border-slate-200' : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200'} rounded-lg text-center font-medium min-w-[130px] max-w-[160px] outline-none transition-all"
+                               placeholder="tap or type...">
+                        <span>${q.post}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderExerciseC() {
+            const passage = document.getElementById('exercise-c-passage');
+            passage.innerHTML = dataExC.map(q => {
+                let validAnswers = [q.ans, ...(q.altAns || [])].join('|');
+                return `
+                    ${q.pre}
+                    <input type="text" 
+                           id="ex-c-${q.id}" 
+                           data-ans="${validAnswers}"
+                           value="${q.defaultVal || ''}"
+                           ${q.readonly ? 'readonly' : ''}
+                           class="ex-c-input inline-block px-2 py-0.5 bg-white border border-slate-300 ${q.readonly ? 'bg-slate-100 text-slate-600 font-semibold border-slate-200' : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-200'} rounded-lg text-center font-medium min-w-[100px] max-w-[130px] outline-none transition-all my-0.5"
+                           placeholder="...">
+                    <span class="font-semibold text-slate-500 text-[11px]">(${q.root})</span>
+                    ${q.post}
+                `;
+            }).join('');
+        }
+
+        function renderExerciseD() {
+            const wordbank = document.getElementById('exercise-d-wordbank');
+            wordbank.innerHTML = '';
+
+            dataExD.forEach(item => {
+                const tile = document.createElement('div');
+                tile.id = `tile-d-${item.word}`;
+                tile.draggable = true;
+                tile.ondragstart = (e) => dragD(e, item.word);
+                tile.onclick = () => selectWordD(item.word);
+                tile.className = "tile-d-item px-3 py-1.5 bg-white border border-slate-300 hover:border-blue-400 shadow-2xs rounded-lg text-xs font-semibold text-slate-700 cursor-pointer select-none transition-all flex items-center gap-1.5";
+                tile.innerHTML = `<i class="fa-solid fa-hand-pointer text-blue-400 text-[10px]"></i> ${item.word}`;
+                wordbank.appendChild(tile);
+            });
+
+            document.querySelectorAll('.drop-target').forEach(zone => {
+                zone.ondragover = allowDrop;
+                zone.ondragleave = handleDragLeave;
+                zone.ondrop = (e) => dropD(e, zone.dataset.column || zone.parentElement.dataset.column);
+            });
+        }
+
+        /* MOBILE & DESKTOP INTERACTION LOGIC */
+
+        // Exercise B Tap & Drag Handlers
+        function dragB(ev, word) {
+            ev.dataTransfer.setData("text/plain", word);
+        }
+
+        function selectWordB(word, elementId) {
+            document.querySelectorAll('.word-tile-b').forEach(el => el.classList.remove('selected-tile'));
+            if (selectedWordB === word) {
+                selectedWordB = null;
+            } else {
+                selectedWordB = word;
+                document.getElementById(elementId).classList.add('selected-tile');
+                showToast('Word Selected', `Tap any gap in Exercise B to place "${word}"`);
+            }
+        }
+
+        function placeWordB(num) {
+            if (selectedWordB) {
+                const input = document.getElementById(`ex-b-${num}`);
+                if (!input.readOnly) {
+                    input.value = selectedWordB;
+                    selectedWordB = null;
+                    document.querySelectorAll('.word-tile-b').forEach(el => el.classList.remove('selected-tile'));
+                }
+            }
+        }
+
+        function dropB(ev, num) {
+            ev.preventDefault();
+            const word = ev.dataTransfer.getData("text/plain");
+            const input = document.getElementById(`ex-b-${num}`);
+            if (!input.readOnly && word) {
+                input.value = word;
+            }
+        }
+
+        // Exercise D Tap & Drag Handlers
+        function selectWordD(word) {
+            document.querySelectorAll('.tile-d-item').forEach(el => el.classList.remove('selected-tile'));
+            if (selectedWordD === word) {
+                selectedWordD = null;
+            } else {
+                selectedWordD = word;
+                const tile = document.getElementById(`tile-d-${word}`);
+                if (tile) tile.classList.add('selected-tile');
+                showToast('Word Selected', `Now tap a column below to place "${word}"`);
+            }
+        }
+
+        function placeSelectedTileInColumn(colType) {
+            if (selectedWordD) {
+                createCardInColumn(selectedWordD, colType);
+                selectedWordD = null;
+                document.querySelectorAll('.tile-d-item').forEach(el => el.classList.remove('selected-tile'));
+            }
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-hover');
+        }
+
+        function handleDragLeave(ev) {
+            ev.currentTarget.classList.remove('drag-hover');
+        }
+
+        function dragD(ev, word) {
+            ev.dataTransfer.setData("word", word);
+        }
+
+        function dropD(ev, colType) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-hover');
+            const word = ev.dataTransfer.getData("word");
+            if (word) createCardInColumn(word, colType);
+        }
+
+        function createCardInColumn(word, colType) {
+            const itemData = dataExD.find(d => d.word === word);
+            if (!itemData) return;
+
+            // Remove existing card if re-placing
+            const existingCard = document.getElementById(`card-d-${word}`);
+            if (existingCard) existingCard.remove();
+
+            // Mark tile in wordbank as used
+            const originalTile = document.getElementById(`tile-d-${word}`);
+            if (originalTile) originalTile.classList.add('opacity-40', 'pointer-events-none');
+
+            const targetZone = document.getElementById(`col-${colType}`);
+            const card = document.createElement('div');
+            card.id = `card-d-${word}`;
+            card.dataset.word = word;
+            card.dataset.targetCol = colType;
+            card.className = "bg-white p-2 sm:p-2.5 rounded-lg border border-slate-200 shadow-2xs flex flex-col gap-1.5 relative transition-all text-xs";
+
+            if (colType === 'both') {
+                card.innerHTML = `
+                    <div class="flex justify-between items-center font-bold text-slate-700 border-b pb-1">
+                        <span>${word}</span>
+                        <button onclick="removeCardD('${word}'); event.stopPropagation();" class="text-slate-400 hover:text-red-500 px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 text-[11px]">
+                        <input type="text" data-type="ful" data-ans="${itemData.ful}" placeholder="-ful" class="ex-d-input px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-center outline-none focus:bg-white focus:border-blue-400">
+                        <input type="text" data-type="less" data-ans="${itemData.less}" placeholder="-less" class="ex-d-input px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-center outline-none focus:bg-white focus:border-blue-400">
+                    </div>
+                `;
+            } else if (colType === 'ful') {
+                card.innerHTML = `
+                    <div class="flex justify-between items-center font-bold text-slate-700 border-b pb-1">
+                        <span>${word}</span>
+                        <button onclick="removeCardD('${word}'); event.stopPropagation();" class="text-slate-400 hover:text-red-500 px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="text-[11px]">
+                        <input type="text" data-type="ful" data-ans="${itemData.ful}" placeholder="-ful form" class="ex-d-input w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-center outline-none focus:bg-white focus:border-blue-400">
+                    </div>
+                `;
+            } else if (colType === 'less') {
+                card.innerHTML = `
+                    <div class="flex justify-between items-center font-bold text-slate-700 border-b pb-1">
+                        <span>${word}</span>
+                        <button onclick="removeCardD('${word}'); event.stopPropagation();" class="text-slate-400 hover:text-red-500 px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="text-[11px]">
+                        <input type="text" data-type="less" data-ans="${itemData.less}" placeholder="-less form" class="ex-d-input w-full px-1.5 py-1 bg-slate-50 border border-slate-200 rounded text-center outline-none focus:bg-white focus:border-blue-400">
+                    </div>
+                `;
+            }
+
+            targetZone.appendChild(card);
+            updateTotalScore();
+        }
+
+        function removeCardD(word) {
+            const card = document.getElementById(`card-d-${word}`);
+            if (card) card.remove();
+            
+            const originalTile = document.getElementById(`tile-d-${word}`);
+            if (originalTile) originalTile.classList.remove('opacity-40', 'pointer-events-none');
+            updateTotalScore();
+        }
+
+        /* EVALUATION LOGIC */
+
+        function normalize(str) {
+            return str ? str.trim().toLowerCase() : '';
+        }
+
+        function checkExercise(part) {
+            let correctCount = 0;
+            let totalCount = 0;
+
+            if (part === 'a') {
+                dataExA.forEach(q => {
+                    totalCount++;
+                    const input = document.getElementById(`ex-a-${q.num}`);
+                    const val = normalize(input.value);
+                    const validAnswers = q.ans.map(a => normalize(a));
+
+                    if (validAnswers.includes(val)) {
+                        correctCount++;
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' correct-input';
+                    } else {
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' incorrect-input';
+                    }
+                });
+                showToast(`Part A Checked`, `${correctCount} of ${totalCount} correct!`);
+            } 
+            else if (part === 'b') {
+                dataExB.forEach(q => {
+                    totalCount++;
+                    const input = document.getElementById(`ex-b-${q.num}`);
+                    const val = normalize(input.value);
+                    const correctAns = normalize(q.ans);
+
+                    if (val === correctAns) {
+                        correctCount++;
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' correct-input';
+                    } else {
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' incorrect-input';
+                    }
+                });
+                showToast(`Part B Checked`, `${correctCount} of ${totalCount} correct!`);
+            } 
+            else if (part === 'c') {
+                dataExC.forEach(q => {
+                    totalCount++;
+                    const input = document.getElementById(`ex-c-${q.id}`);
+                    const val = normalize(input.value);
+                    const validAnswers = input.dataset.ans.split('|').map(a => normalize(a));
+
+                    if (validAnswers.includes(val)) {
+                        correctCount++;
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' correct-input';
+                    } else {
+                        input.className = input.className.replace(/incorrect-input|correct-input/g, '') + ' incorrect-input';
+                    }
+                });
+                showToast(`Part C Checked`, `${correctCount} of ${totalCount} correct!`);
+            } 
+            else if (part === 'd') {
+                dataExD.forEach(item => {
+                    totalCount++;
+                    const card = document.getElementById(`card-d-${item.word}`);
+                    if (!card) return;
+
+                    const currentCol = card.dataset.targetCol;
+                    const inputs = card.querySelectorAll('.ex-d-input');
+                    let cardCorrect = (currentCol === item.correctCol);
+
+                    inputs.forEach(inp => {
+                        const val = normalize(inp.value);
+                        const expected = normalize(inp.dataset.ans);
+                        if (val !== expected) {
+                            cardCorrect = false;
+                            inp.classList.add('border-red-400', 'bg-red-50');
+                        } else {
+                            inp.classList.remove('border-red-400', 'bg-red-50');
+                            inp.classList.add('border-emerald-400', 'bg-emerald-50');
+                        }
+                    });
+
+                    if (cardCorrect) {
+                        correctCount++;
+                        card.className = card.className.replace(/border-red-300|border-emerald-300/g, '') + ' border-emerald-300 bg-emerald-50/40';
+                    } else {
+                        card.className = card.className.replace(/border-red-300|border-emerald-300/g, '') + ' border-red-300 bg-red-50/40';
+                    }
+                });
+                showToast(`Part D Checked`, `${correctCount} of ${totalCount} words correctly placed & formed!`);
+            }
+
+            updateTotalScore();
+        }
+
+        function checkAllExercises() {
+            checkExercise('a');
+            checkExercise('b');
+            checkExercise('c');
+            checkExercise('d');
+            
+            const total = calculateTotalScore();
+            showToast(`Workbook Evaluated!`, `Overall Score: ${total.score} / ${total.max} (${total.percent}%)`);
+        }
+
+        function calculateTotalScore() {
+            let score = 0;
+            let max = 0;
+
+            // Part A
+            dataExA.forEach(q => {
+                max++;
+                const input = document.getElementById(`ex-a-${q.num}`);
+                if (input && q.ans.map(a => normalize(a)).includes(normalize(input.value))) score++;
+            });
+
+            // Part B
+            dataExB.forEach(q => {
+                max++;
+                const input = document.getElementById(`ex-b-${q.num}`);
+                if (input && normalize(input.value) === normalize(q.ans)) score++;
+            });
+
+            // Part C
+            dataExC.forEach(q => {
+                max++;
+                const input = document.getElementById(`ex-c-${q.id}`);
+                if (input && input.dataset.ans.split('|').map(a => normalize(a)).includes(normalize(input.value))) score++;
+            });
+
+            // Part D
+            dataExD.forEach(item => {
+                max++;
+                const card = document.getElementById(`card-d-${item.word}`);
+                if (card) {
+                    const currentCol = card.dataset.targetCol;
+                    let correct = (currentCol === item.correctCol);
+                    card.querySelectorAll('.ex-d-input').forEach(inp => {
+                        if (normalize(inp.value) !== normalize(inp.dataset.ans)) correct = false;
+                    });
+                    if (correct) score++;
+                }
+            });
+
+            const percent = Math.round((score / max) * 100);
+            return { score, max, percent };
+        }
+
+        function updateTotalScore() {
+            const result = calculateTotalScore();
+            document.getElementById('total-score').innerText = `${result.score} / ${result.max}`;
+            document.getElementById('total-score-mobile').innerText = `${result.score} / ${result.max}`;
+            document.getElementById('score-percentage').innerText = `${result.percent}%`;
+        }
+
+        function resetAllExercises() {
+            selectedWordB = null;
+            selectedWordD = null;
+            renderExerciseA();
+            renderExerciseB();
+            renderExerciseC();
+            renderExerciseD();
+            updateTotalScore();
+            showToast(`Workbook Cleared`, `All answers reset.`);
+        }
+
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+
+            toast.classList.remove('translate-y-28', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-28', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
